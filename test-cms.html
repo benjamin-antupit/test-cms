@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.1.0/papaparse.min.js"></script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+  </head>
+  <body>
+
+    <input class="form-control" id="input" type="text" placeholder="Search...">
+
+    <div class="filter-nav">
+      <button class="btn btn-primary disabled">Mechanims</button>
+      <button class="btn btn-secondary" data-filter="">All</button>
+      <button class="btn btn-secondary" data-filter="nature">Arm</button>
+      <button class="btn btn-secondary" data-filter="food">Drive</button>
+      <button class="btn btn-secondary" data-filter="architecture">Lift</button>
+    </div>
+
+    <div id="mainContent" style="font-family: 'Heebo', sans-serif;"></div>
+
+    <p id="spreadsheet_info"></p>
+
+    <p><strong>This example is only going to work if it's on the internet or on a local server!</strong> To run a local server, run "terminal" or "command prompt" and run the command <code>python -m http.server</code> or <code>python -m SimpleHTTPServer</code> (whichever one works, really, and you might even need to <a href="http://littlecolumns.com/tools/python-wrangler/">install Python</a>). Then visit <a href="http://localhost:8000/">http://localhost:8000</a> and you'll be all set.</p>
+
+    <script type="text/javascript">
+      var public_spreadsheet_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRq14PLLPGktubqqNwCbKF1Mdy2AOHkCKT1MFYhOYoQCrNq8CrI38X7K5oDpmIyZB5M6Q19yQb98Y8g/pub?gid=0&single=true&output=csv';
+
+      function init() {
+        Papa.parse(public_spreadsheet_url, {
+          download: true,
+          header: true,
+          complete: showInfo
+        })
+      }
+
+      window.addEventListener('DOMContentLoaded', init)
+
+      function showInfo(results) {
+        var data = results.data
+
+        // data comes through as a simple array since simpleSheet is turned on
+        console.log("Successfully processed " + data.length + " rows!")
+
+        var content = "<hr>";
+
+        for (let i = 0; i < data.length; i++) {
+
+          //let name = data[i].name;
+          let image_url = data[i].image_url;
+          let description = data[i].description;
+          let game = data[i].game;
+          let type = data[i].type;
+          let subtype = data[i].subtype;
+          let team = data[i].team;
+          let year = data[i].year;
+
+          content = content + `<p> ${data[i].name} | ${data[i].game} | ${data[i].type} | ${data[i].subtype} | ${data[i].team} </p> <image src="${data[i].image_url}" width="20%" /> <hr id= "content-divider"> `
+
+        }
+
+        console.log(content);
+        document.getElementById("mainContent").innerHTML = content;
+        console.log(data);
+        initSearch();
+
+
+      }
+
+      document.getElementById("spreadsheet_info").innerHTML = "The published spreadsheet is located at <a target='_new' href='" + public_spreadsheet_url + "'>" + public_spreadsheet_url + "</a>";
+    </script>
+
+    <script type="text/javascript">
+
+      function initSearch() {
+
+    $(document).ready(function(){
+      $("#input").on("keyup", updateVisibility());
+      $("#input").on("keyup", updateVisibility());
+    });
+    console.log("jQuery loaded");
+  }
+
+  function updateVisibility() {
+    var value = $(this).val().toLowerCase();
+    $("#mainContent *").filter(function() {
+      $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+    });
+  }
+    </script>
+
+  </body>
+</html>

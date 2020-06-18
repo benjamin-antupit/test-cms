@@ -10,9 +10,11 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/mustache@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.basic.min.js"></script>
 
   </head>
-  <body>
+  <body onload="fillMainContent()">
 
     <input class="form-control" id="input" type="text" placeholder="Search...">
 
@@ -24,7 +26,18 @@
       <button class="btn btn-secondary" data-filter="architecture">Lift</button>
     </div>
 
-    <div id="mainContent" style="font-family: 'Heebo', sans-serif;"></div>
+    <div id="mainContent" style="font-family: 'Heebo', sans-serif;">Loading...</div>
+
+    <script id="template" type="x-tmpl-mustache">
+    {{#data}}
+      <div id="card"><p>
+        {{name}} | {{game}} | {{type}} | {{subtype}} | {{team}}
+      </p>
+      <image src="{{image_url}}" width="20%" />
+      </div>
+      <hr id= "content-divider">
+      {{/data}}
+    </script>
 
     <p id="spreadsheet_info"></p>
 
@@ -33,67 +46,34 @@
     <script type="text/javascript">
       var public_spreadsheet_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRq14PLLPGktubqqNwCbKF1Mdy2AOHkCKT1MFYhOYoQCrNq8CrI38X7K5oDpmIyZB5M6Q19yQb98Y8g/pub?gid=0&single=true&output=csv';
 
-      function init() {
+      function fillMainContent() {
         Papa.parse(public_spreadsheet_url, {
           download: true,
           header: true,
-          complete: showInfo
+          complete: function (results) {
+            console.log({"data":results.data});
+
+            var template = document.getElementById('template').innerHTML;
+            console.log(template);
+
+            var rendered = Mustache.render(template, {"data":results.data});
+            document.getElementById('mainContent').innerHTML = rendered;
+            console.log("results handled " + rendered)
+
+            $(document).ready(function(){$("#input").keyup(updateVisibility);});
+            console.log("jQuery loaded");
+          }
         })
       }
 
-      window.addEventListener('DOMContentLoaded', init)
-
-      function showInfo(results) {
-        var data = results.data
-
-        // data comes through as a simple array since simpleSheet is turned on
-        console.log("Successfully processed " + data.length + " rows!")
-
-        var content = "<hr>";
-
-        for (let i = 0; i < data.length; i++) {
-
-          //let name = data[i].name;
-          let image_url = data[i].image_url;
-          let description = data[i].description;
-          let game = data[i].game;
-          let type = data[i].type;
-          let subtype = data[i].subtype;
-          let team = data[i].team;
-          let year = data[i].year;
-
-          content = content + `<p> ${data[i].name} | ${data[i].game} | ${data[i].type} | ${data[i].subtype} | ${data[i].team} </p> <image src="${data[i].image_url}" width="20%" /> <hr id= "content-divider"> `
-
-        }
-
-        console.log(content);
-        document.getElementById("mainContent").innerHTML = content;
-        console.log(data);
-        initSearch();
-
-
-      }
-
-      document.getElementById("spreadsheet_info").innerHTML = "The published spreadsheet is located at <a target='_new' href='" + public_spreadsheet_url + "'>" + public_spreadsheet_url + "</a>";
-    </script>
-
-    <script type="text/javascript">
-
-      function initSearch() {
-
-    $(document).ready(function(){
-      $("#input").on("keyup", updateVisibility());
-      $("#input").on("keyup", updateVisibility());
-    });
-    console.log("jQuery loaded");
-  }
-
   function updateVisibility() {
-    var value = $(this).val().toLowerCase();
-    $("#mainContent *").filter(function() {
+    var value = $("#input").val().toLowerCase();
+    $("#mainContent div").filter(function() {
       $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
     });
   }
+
+  document.getElementById("spreadsheet_info").innerHTML = "The published spreadsheet is located at <a target='_new' href='" + public_spreadsheet_url + "'>" + public_spreadsheet_url + "</a>";
     </script>
 
   </body>

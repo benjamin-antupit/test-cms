@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html style="font-size: 16px">
   <head>
 
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -8,27 +8,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/mustache@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.basic.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.js"></script>
 
   </head>
-  <body onload="fillMainContent()">
+  <body onload="onLoad()">
 
-    <input class="form-control" id="input" type="text" placeholder="Search...">
+    <input class="form-control" id="input" type="text" placeholder="Fuzzy Search...">
 
-    <div class="filter-nav">
-      <button class="btn btn-primary disabled">Mechanims</button>
-      <button class="btn btn-secondary" data-filter="">All</button>
-      <button class="btn btn-secondary" data-filter="nature">Arm</button>
-      <button class="btn btn-secondary" data-filter="food">Drive</button>
-      <button class="btn btn-secondary" data-filter="architecture">Lift</button>
-    </div>
+    <div id="mainFilters" style="font-family: 'Heebo', sans-serif;">Loading filters...</div>
 
-    <div id="mainContent" style="font-family: 'Heebo', sans-serif;">Loading...</div>
+    <script id="filter-template" type="x-tmpl-mustache">
+    {{#filter}}
+      <div id="filter-nav" class="btn-group">
+        <div class="btn btn-primary active disabled" style="opacity: 1"> {{label}} </div>
+         <div class="btn-group btn-group-toggle" data-toggle="buttons">
+        <label id="open-filter" class="btn btn-secondary active"> <input type="radio" autocomplete="off"> All </label>
+        {{#values}}{{#.}}
+        <label id="filter" data-filter-field="{{label}}" class="btn btn-secondary" data-filter="{{.}}"> <input type="radio" autocomplete="off" >{{.}}</label>
+        {{/.}}{{/values}}
+      </div></div>
+      {{/filter}}
+    </script>
 
-    <script id="template" type="x-tmpl-mustache">
+    <div id="mainContent" style="font-family: 'Heebo', sans-serif;">Loading content...</div>
+
+    <script id="card-template" type="x-tmpl-mustache">
     {{#data}}
       <div id="card"><p>
         {{name}} | {{game}} | {{type}} | {{subtype}} | {{team}}
@@ -44,36 +53,104 @@
     <p><strong>This example is only going to work if it's on the internet or on a local server!</strong> To run a local server, run "terminal" or "command prompt" and run the command <code>python -m http.server</code> or <code>python -m SimpleHTTPServer</code> (whichever one works, really, and you might even need to <a href="http://littlecolumns.com/tools/python-wrangler/">install Python</a>). Then visit <a href="http://localhost:8000/">http://localhost:8000</a> and you'll be all set.</p>
 
     <script type="text/javascript">
-      var public_spreadsheet_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRq14PLLPGktubqqNwCbKF1Mdy2AOHkCKT1MFYhOYoQCrNq8CrI38X7K5oDpmIyZB5M6Q19yQb98Y8g/pub?gid=0&single=true&output=csv';
+      var public_data_spreadsheet_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRq14PLLPGktubqqNwCbKF1Mdy2AOHkCKT1MFYhOYoQCrNq8CrI38X7K5oDpmIyZB5M6Q19yQb98Y8g/pub?gid=0&single=true&output=csv';
+      var config_spreadsheet_url =      'https://docs.google.com/spreadsheets/d/e/2PACX-1vRq14PLLPGktubqqNwCbKF1Mdy2AOHkCKT1MFYhOYoQCrNq8CrI38X7K5oDpmIyZB5M6Q19yQb98Y8g/pub?gid=594456072&single=true&output=csv';
+      var defaultKeys = ['name','game','type','subtype','team','description','year'];
+      var importedData, importedConfig, fuse;
 
-      function fillMainContent() {
-        Papa.parse(public_spreadsheet_url, {
+      function onLoad() {
+        fillMainContent(importedData);
+
+        fuse = new Fuse(importedData,
+          {
+          keys: defaultKeys,
+          useExtendedSearch: true
+        })
+        console.log("search loaded");
+        console.log(fuse.search("arm").map(function (array) {return array.item}))
+
+          $("#input").keyup(updateVisibility);
+      }
+
+      window.addEventListener('DOMContentLoaded', retriveData)
+
+      function retriveData() {
+        let unformattedConfig = [];
+        Papa.parse(public_data_spreadsheet_url, {
           download: true,
           header: true,
           complete: function (results) {
-            console.log({"data":results.data});
+            importedData = results.data;
+          }
+        })
 
-            var template = document.getElementById('template').innerHTML;
-            console.log(template);
-
-            var rendered = Mustache.render(template, {"data":results.data});
-            document.getElementById('mainContent').innerHTML = rendered;
-            console.log("results handled " + rendered)
-
-            $(document).ready(function(){$("#input").keyup(updateVisibility);});
-            console.log("jQuery loaded");
+        Papa.parse(config_spreadsheet_url, {
+          download: true,
+          header: false,
+          complete: function (results) {
+            unformattedConfig = results.data;
+            importedConfig = unformattedConfig.map( array => ({label: array[0], values : array.slice(1)}) );
+            console.log(importedConfig);
+            fillFilters(importedConfig);
+            $("#mainFilters").children().mouseup(function() {
+              setTimeout(updateVisibility,1)
+            });
           }
         })
       }
 
-  function updateVisibility() {
-    var value = $("#input").val().toLowerCase();
-    $("#mainContent div").filter(function() {
-      $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-    });
-  }
 
-  document.getElementById("spreadsheet_info").innerHTML = "The published spreadsheet is located at <a target='_new' href='" + public_spreadsheet_url + "'>" + public_spreadsheet_url + "</a>";
+
+      function fillMainContent(data) {
+        console.log({"data":data});
+
+        var template = document.getElementById('card-template').innerHTML;
+
+        var rendered = Mustache.render(template, {"data":data});
+        document.getElementById('mainContent').innerHTML = rendered;
+        //console.log("results handled " + rendered)
+
+      }
+
+      function fillFilters(config) {
+        console.log({"filter":config});
+
+        var template = document.getElementById('filter-template').innerHTML;
+
+        var rendered = Mustache.render(template, {"filter":config});
+        document.getElementById('mainFilters').innerHTML = rendered;
+        //console.log("filters handled " + rendered)
+
+      }
+
+      function updateVisibility() {
+        let query = composeQuery();
+        console.log(query);
+
+        if (query) {
+          console.log(fuse.search(composeQuery()));
+          //.map(function (array) {return array.item});
+          fillMainContent(fuse.search(query).map(function (array) {return array.item}));
+        } else {
+          fillMainContent(importedData);
+          console.log("filling with importedData")
+        }
+      }
+
+      function composeQuery() {
+        let list = []
+        if ($("#filter.active").length > 0) {
+          $("#filter.active").each(function(i) {
+            list.push({ [$(this).data("filter-field")]: $(this).data("filter").toString() });
+          });
+        }
+        if ($("#input").val() != "") {
+          list.push({$or:defaultKeys.map((k) => ({ [k]: $("#input").val() }))});
+        }
+        return list != "" ? {$and: list} : false;
+      }
+
+  document.getElementById("spreadsheet_info").innerHTML = "The published spreadsheet is located at <a target='_new' href='" + public_data_spreadsheet_url + "'>" + public_data_spreadsheet_url + "</a>";
     </script>
 
   </body>
